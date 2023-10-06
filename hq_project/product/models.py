@@ -14,19 +14,35 @@ class Product(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Владелец')
-    # lessons = models.ManyToManyField(
-    #     'Lesson',
-    #     through='ProductLesson',
-    #     through_fields=('product', 'lesson'),
-    #     blank=False,
-    #     related_name='rname_product',
-    #     verbose_name='Список уроков')
+
     class Meta:
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'
 
     def __str__(self):
         return self.name_product
+    
+    @property
+    def total_views(self):
+        return UserLesson.objects.filter(lesson__products=self).count()
+
+    @property
+    def total_time_viewed(self):
+        return UserLesson.objects.filter(lesson__products=self).aggregate(models.Sum('viewed_time'))["viewed_time__sum"]
+
+    @property
+    def total_students(self):
+        return User.objects.filter(userlesson__lesson__products=self).distinct().count()
+
+    @property
+    def acquisition_percentage(self):
+        total_users = User.objects.count()
+        access_count = ProductUser.objects.filter(product=self, accsess_user=True).count()
+
+        if total_users == 0:
+            return 0
+        else:
+            return (access_count / total_users) * 100
 
 
 class Lesson(models.Model):
@@ -48,14 +64,6 @@ class Lesson(models.Model):
         return self.name
 
 
-# class ProductLesson(models.Model):
-#     product = models.ForeignKey(Product,
-#                                 on_delete=models.CASCADE,
-#                                 verbose_name='Название продукта')
-#     lesson = models.ForeignKey(Lesson,
-#                                on_delete=models.CASCADE,
-#                                verbose_name='Название урока')
-    
 class ProductUser(models.Model):
     product = models.ForeignKey(Product,
                                 on_delete=models.CASCADE,
@@ -82,7 +90,10 @@ class UserLesson(models.Model):
                                on_delete=models.CASCADE,
                                verbose_name='Название урока')
     viewed_time = models.PositiveIntegerField(verbose_name='Фактическое время просмотра')
-    status = models.BooleanField(default=False, verbose_name='статус Просмотрено')
+    status = models.BooleanField(default=False,
+                                 verbose_name='статус Просмотрено')
+    last_viewed_date = models.DateTimeField(auto_now=True,
+                                            verbose_name='Дата последнего просмотра')
 
     class Meta:
         verbose_name = 'Урок-Пользователь'
@@ -91,5 +102,11 @@ class UserLesson(models.Model):
     def __str__(self):
         return f'{self.lesson}, {self.user}, {self.viewed_time}, {self.status}'
 
-
-
+    def calculate_status(self):
+        total_duration = self.lesson.duration
+        viewed_percentage = (self.viewed_time / total_duration) * 100
+        if viewed_percentage >= 80:
+            self.status = True
+        else:
+            self.status = False
+        self.save()
