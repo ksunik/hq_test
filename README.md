@@ -6,8 +6,8 @@ hq_test
  - django 3.2
  - djangorestframework 3.14.0
 
-## Локальная установка без БД
-## Настройка окружения
+### Локальная установка без БД
+### Настройка окружения
 ```bash
 git clone https://github.com/ksunik/hq_test.git
 
@@ -22,7 +22,7 @@ python3 manage.py createsuperuser
 ```
 
 ### Запуск проекта
-# Запуск backend
+### Запуск backend
 ```
 cd hq_project
 python manage.py runserver
